@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Lightman's Game - Life Progress Bar</title>
+<style>
+  :root{
+    --bg:#111;
+    --panel:#1e1e2a;
+    --accent:#7aff7a;
+    --muted:#bfbfbf;
+    --tile:#2b2b3a;
+    --retro-green:#7CFC00;
+  }
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,#141414,#0a0a0a);font-family:"Courier New",Courier,monospace;color:var(--muted);}
+  .wrap{max-width:900px;margin:24px auto;padding:20px;border:6px solid #222;background:linear-gradient(180deg,#252536,#1a1a25);box-shadow:0 8px 40px rgba(0,0,0,0.6);border-radius:6px;}
+  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .brand{font-size:14px;color:var(--accent);font-weight:bold;padding-left:6px;}
+  .title{font-size:18px;color:var(--muted);text-align:center;margin-top:6px;margin-bottom:10px;}
+  .board{display:grid;grid-template-columns:1fr 1fr;gap:18px;background:var(--tile);padding:18px;border-radius:6px;border:2px solid #111;}
+  .left{display:flex;flex-direction:column;align-items:center;gap:12px;}
+  .pixel-canvas{background:#2b2b2b;border:4px solid #0e0e0e;image-rendering:pixelated;}
+  .form{width:100%;display:flex;flex-direction:column;gap:8px;}
+  .row{display:flex;gap:8px;align-items:center;}
+  label{width:120px;color:var(--muted);font-size:13px;}
+  input[type="number"]{flex:1;padding:8px;background:#0f0f14;border:2px solid #111;color:var(--muted);font-family:monospace;border-radius:4px;}
+  .btns{display:flex;gap:8px;margin-top:8px;}
+  button{padding:8px 12px;background:#0b0b0f;border:2px solid #111;color:var(--muted);cursor:pointer;font-family:monospace;border-radius:4px;}
+  button.primary{background:var(--retro-green);color:#071207;font-weight:bold;}
+  .right{display:flex;flex-direction:column;gap:12px;padding:4px;position:relative;}
+  .panel{background:#121214;border:2px solid #0e0e0e;padding:12px;border-radius:4px;}
+  .big-title{font-size:16px;color:var(--muted);text-align:center;}
+  .progress-wrap{background:#222;border:2px solid #020202;height:36px;border-radius:4px;overflow:hidden;position:relative;}
+  .progress-fill{height:100%;width:0;background:linear-gradient(90deg,#0ee37a,#19ffb7);transition:width 0.2s linear;}
+  .progress-text{position:absolute;left:10px;top:8px;font-size:13px;color:#042204;font-weight:bold;}
+  .bars{display:flex;gap:12px;align-items:center;}
+  .bar{height:18px;background:#222;border:1px solid #111;position:relative;border-radius:3px;overflow:hidden;}
+  .fill-passed{height:100%;background:#4f9bff;width:0;}
+  .fill-remaining{height:100%;background:#ff7f7f;position:absolute;right:0;width:0;}
+  .percent{font-size:13px;color:var(--muted);margin-top:6px;text-align:center;}
+  .detail{font-size:14px;color:var(--muted);line-height:1.5;}
+  footer{margin-top:12px;font-size:12px;color:#8f8f8f;text-align:center;}
+  .external-links{max-width:900px;margin:12px auto;padding:0 20px;font-size:13px;color:#9f9f9f;display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center;}
+  .external-links a{color:#7aff7a;text-decoration:none;}
+  @media(max-width:720px){.board{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">Lightman's Game</div>
+    <div style="font-size:12px;color:#8f8f8f;">Enjoy Your Life!!</div>
+  </header>
+
+  <div class="title"><strong style="color:#dfefff">Life Progress Bar</strong></div>
+
+  <div class="board">
+    <div class="left">
+      <canvas id="earth" width="160" height="160" class="pixel-canvas"></canvas>
+
+      <div class="form panel" style="width:100%;">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:6px;">Enter your birth date</div>
+        <div class="row"><label>Year</label><input id="birthYear" type="number" placeholder="e.g. 1990" min="0"></div>
+        <div class="row"><label>Month</label><input id="birthMonth" type="number" placeholder="1-12" min="1" max="12"></div>
+        <div class="row"><label>Day</label><input id="birthDay" type="number" placeholder="1-31" min="1" max="31"></div>
+        <div style="height:8px"></div>
+        <div class="row"><label>Expected age</label><input id="expectedAge" type="number" placeholder="e.g. 85" min="1"></div>
+        <div class="btns" style="justify-content:flex-end;">
+          <button id="startBtn" class="primary">Start</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="right panel" id="progressPanel" style="display:none;">
+      <div class="big-title">Life Progress</div>
+
+      <div style="margin-top:12px;">
+        <div class="progress-wrap">
+          <div id="progressFill" class="progress-fill"></div>
+          <div id="progressText" class="progress-text">0%</div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;">
+        <div class="bars" style="gap:12px;">
+          <div style="flex:1;">
+            <div style="font-size:13px;color:var(--muted);margin-bottom:6px;">Passed</div>
+            <div class="bar" style="width:100%;"><div id="barPassed" class="fill-passed"></div></div>
+            <div class="percent" id="passedText">0 y</div>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:13px;color:var(--muted);margin-bottom:6px;">Remaining</div>
+            <div class="bar" style="width:100%;"><div id="barRemaining" class="fill-remaining"></div></div>
+            <div class="percent" id="remainingText">0 y</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:6px;">Summary</div>
+        <div class="detail" id="summaryText">
+          P: 0 y 0 m 0 w 0 d 0 h 0 min 0 s<br>
+          R: 0 y 0 m 0 w 0 d 0 h 0 min 0 s
+        </div>
+      </div>
+
+      <div style="margin-top:16px;font-size:13px;color:#9f9f9f;">Birth: <span id="birthDisplay">—</span></div>
+
+      <div style="position:absolute;bottom:12px;right:12px;">
+        <button id="backBtn">Back</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>Made with ❤️ — Lightman Lyu</footer>
+</div>
+
+<div class="external-links">
+  <a href="https://www.youtube.com/@lightmanluc7447" target="_blank">My YouTube Channel abt my boring Life</a>
+  <a href="https://www.instagram.com/lightmanhand?igsh=MTNocGNueDVwc29qNA%3D%3D&utm_source=qr" target="_blank">My Instagram abt SHIT I draw</a>
+</div>
+
+<script>
+// JS 完全保持不變
+const earthCanvas=document.getElementById('earth'),ctx=earthCanvas.getContext('2d');
+ctx.imageSmoothingEnabled=false;
+function drawEarth(){
+  const g=20,p=earthCanvas.width/g;
+  const sea='#163f6b',lsea='#1f5b8f',land='#2fb84f',lland='#69e578',rim='#07192b';
+  for(let y=0;y<g;y++){
+    for(let x=0;x<g;x++){
+      ctx.fillStyle=((x+y)%2===0)?sea:lsea;
+      ctx.fillRect(x*p,y*p,p,p);
+    }
+  }
+  const cx=g/2,cy=g/2,r=g*0.42;
+  for(let y=0;y<g;y++){
+    for(let x=0;x<g;x++){
+      const dx=x-cx,dy=y-cy;
+      if(dx*dx+dy*dy<=r*r){
+        let prob=0.08+0.12*(Math.sin((x-cx)/r*3.5)+Math.cos((y-cy)/r*2.7));
+        prob+=(-dx/r)*0.06;
+        ctx.fillStyle=Math.random()<prob?(Math.random()<0.4?land:lland):(Math.random()<0.5?sea:lsea);
+      }else ctx.fillStyle=rim;
+      ctx.fillRect(x*p,y*p,p,p);
+    }
+  }
+}
+drawEarth();
+
+function pad(n){return n.toString().padStart(2,'0');}
+function computeBreakdown(b,n){
+  let y=n.getFullYear()-b.getFullYear(),m=n.getMonth()-b.getMonth();
+  if(n.getDate()<b.getDate())m--;
+  if(m<0){m+=12;y--;}
+  const a=new Date(b.getTime());
+  a.setFullYear(b.getFullYear()+y);
+  a.setMonth(b.getMonth()+m);
+  let ms=n-a,d=Math.floor(ms/86400000);
+  ms-=d*86400000;
+  const h=Math.floor(ms/3600000);
+  ms-=h*3600000;
+  const mi=Math.floor(ms/60000);
+  ms-=mi*60000;
+  const s=Math.floor(ms/1000);
+  return{years:y,months:m,weeks:Math.floor(d/7),days:d,hours:h,minutes:mi,seconds:s};
+}
+function computePct(b,exp,n){
+  const death=new Date(b.getTime());
+  death.setFullYear(death.getFullYear()+exp);
+  const total=death-b,live=n-b;
+  return{pct:Math.min(1,live/total),death};
+}
+
+const yI=birthYear,mI=birthMonth,dI=birthDay,eI=expectedAge,
+startBtn=document.getElementById('startBtn'),
+panel=document.getElementById('progressPanel'),
+fill=document.getElementById('progressFill'),
+pText=document.getElementById('progressText'),
+barP=document.getElementById('barPassed'),
+barR=document.getElementById('barRemaining'),
+pYear=document.getElementById('passedText'),
+rYear=document.getElementById('remainingText'),
+summary=document.getElementById('summaryText'),
+birthDisplay=document.getElementById('birthDisplay'),
+backBtn=document.getElementById('backBtn');
+
+let timer=null,birth=null,expAge=null,deathDate=null;
+function start(b,e){
+  birth=b;expAge=e;
+  deathDate=new Date(b.getTime());
+  deathDate.setFullYear(b.getFullYear()+e);
+  panel.style.display='block';
+  birthDisplay.textContent=`${b.getFullYear()}-${pad(b.getMonth()+1)}-${pad(b.getDate())} (expect ${e} y)`;
+  if(timer)clearInterval(timer);
+  update();
+  timer=setInterval(update,250);
+}
+function update(){
+  const now=new Date();
+  const {pct}=computePct(birth,expAge,now);
+  fill.style.width=(pct*100)+'%';
+  pText.textContent=(pct*100).toFixed(2)+'%';
+  const lived=(now-birth)/(365.2425*86400000);
+  barP.style.width=Math.min(1,lived/expAge)*100+'%';
+  barR.style.width=Math.max(0,1-lived/expAge)*100+'%';
+  pYear.textContent=Math.floor(lived)+' y';
+  rYear.textContent=Math.max(0,Math.floor(expAge-lived))+' y';
+  const p=computeBreakdown(birth,now);
+  const r=computeBreakdown(now,deathDate);
+  summary.innerHTML=`P: <strong style="color:#9fffbf">${p.years}</strong> y `+
+    `<strong style="color:#9fffbf">${p.months}</strong> m `+
+    `<strong style="color:#9fffbf">${p.weeks}</strong> w `+
+    `<strong style="color:#9fffbf">${p.days}</strong> d `+
+    `<strong style="color:#9fffbf">${pad(p.hours)}</strong> h `+
+    `<strong style="color:#9fffbf">${pad(p.minutes)}</strong> min `+
+    `<strong style="color:#9fffbf">${pad(p.seconds)}</strong> s<br>`+
+    `R: <strong style="color:#ffbfbf">${r.years}</strong> y `+
+    `<strong style="color:#ffbfbf">${r.months}</strong> m `+
+    `<strong style="color:#ffbfbf">${r.weeks}</strong> w `+
+    `<strong style="color:#ffbfbf">${r.days}</strong> d `+
+    `<strong style="color:#ffbfbf">${pad(r.hours)}</strong> h `+
+    `<strong style="color:#ffbfbf">${pad(r.minutes)}</strong> min `+
+    `<strong style="color:#ffbfbf">${pad(r.seconds)}</strong> s`;
+}
+function validate(){
+  const y=parseInt(yI.value),m=parseInt(mI.value),d=parseInt(dI.value),e=parseInt(eI.value);
+  if(isNaN(y)||isNaN(m)||isNaN(d)||isNaN(e)){alert('Please enter complete numbers');return;}
+  if(m<1||m>12||d<1||d>31||e<1){alert('Please enter a valid date/age');return;}
+  const bd=new Date(y,m-1,d);
+  if(isNaN(bd))return alert('Invalid date');
+  start(bd,e);
+}
+startBtn.onclick=validate;
+backBtn.onclick=()=>{
+  if(timer)clearInterval(timer);
+  panel.style.display='none';
+};
+
+setInterval(drawEarth,200);
+</script>
+</body>
+</html>
